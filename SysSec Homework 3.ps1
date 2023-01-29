@@ -1,5 +1,4 @@
 
-
 function TestPing { ## This function is designed to ping the $TargetIP from the $TargetVM using the local credentials.
     param(
         $TargetIP,
