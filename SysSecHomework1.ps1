@@ -1,7 +1,5 @@
 #$vSphereUser = Read-Host "vSphere Username"
 #$vSpherePass = Read-Host "vSphere Password" -AsSecureString
-$vSphereUser = "secdevlocal@vsphere.local"
-$vSpherePass = "tallclub25"
 Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
 write-host("Running Homework 1 Script")
 function InvokeScript {
