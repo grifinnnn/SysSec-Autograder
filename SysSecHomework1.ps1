@@ -1,6 +1,7 @@
 Clear-Host
 $vSphereUser = Read-Host "vSphere Username"
 $vSpherePass = Read-Host "vSphere Password" -AsSecureString
+
 Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
 write-host("Grading Homework 1... This might take a while.")
 $startTime = Get-Date
