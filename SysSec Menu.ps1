@@ -1,36 +1,58 @@
-#secdevlocal@vsphere.local:tallclub25
+$menuOptions = @("Homework 1", "Homework 2", "Homework 3", "Quit")
+$selectedIndex = 0
 
+Clear-Host
+Write-Host "================ SysSec Homework Autograder ================"
+Write-Host "================ Made by Griffin Refol ====================="
+while ($selectedIndex -ne ($menuOptions.Count - 1)) {
+    for ($i = 0; $i -lt $menuOptions.Count; $i++) {
+        if ($i -eq $selectedIndex) {
+            Write-Host("--> $($menuOptions[$i])")
+        } else {
+            Write-Host("  $($menuOptions[$i])")
+        }
+    }
 
-function Show-Menu {
-    param (
-        [string]$Title = 'SysSec Homework Autograder'
-    )
-    Clear-Host
-    Write-Host "================ $Title ================"
-    Write-Host "================ Made by Griffin Refol ====================="
-    
-    Write-Host "Homework 1: Press '1' for this option."
-    Write-Host "Homework 2: Press '2' for this option."
-    Write-Host "Homework 2: Press '3' for this option."
-    Write-Host "Q: Press 'Q' to quit."
+    $key = [Console]::ReadKey().Key
+    switch ($key) {
+        'DownArrow' {
+            Clear-Host
+            Write-Host "================ SysSec Homework Autograder ================"
+            Write-Host "================ Made by Griffin Refol ====================="
+            if ($selectedIndex -lt ($menuOptions.Count - 1)) {
+                $selectedIndex++
+            }
+        }
+        'UpArrow' {
+            Clear-Host
+            Write-Host "================ SysSec Homework Autograder ================"
+            Write-Host "================ Made by Griffin Refol ====================="
+            if ($selectedIndex -gt 0) {
+                $selectedIndex--
+            }
+        }
+        'Enter' {
+            break
+        }
+    }
+
+    if ($key -eq 'Enter') {
+        break
+    }
 }
 
-do
- {
-    Show-Menu
-    $selection = Read-Host "Please make a selection"
-    switch ($selection)
-    {
-      '1' {
-    .\SysSecHomework1.ps1
-    } '2' {
-    .\SysSec Homework 2.ps1
-    } '3' {
-    .\SysSec Homework 3.ps1
+
+switch ($menuOptions[$selectedIndex]) {
+    "Homework 1" {
+        .\SysSecHomework1.ps1
     }
+    "Homework 2" {
+        .\SysSecHomework2.ps1
     }
-    if ($selection -ne 'Q') {
-        pause
+    "Homework 3" {
+        .\SysSecHomework3.ps1
     }
- }
- until ($selection -eq 'Q')
+    "Quit" {
+        Write-Host("Exiting...")
+    }
+}
