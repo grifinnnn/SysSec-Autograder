@@ -1,96 +1,74 @@
-function InvokeScript { ##This function is designed to test different web protocols. You set the $TargetIP, $SourceDevice, $Port, $Username, and $Passswd. $TargetIP is the IP you're running the test aganist. $SourceDevice is the device that is running the scripts. $Port is the protocol you want to test. $Username and $Passwd are the credentials to the $SourceDevice.
+Clear-Host
+$vSphereUser = Read-Host "vSphere Username"
+$vSpherePass = Read-Host "vSphere Password" -AsSecureString
+
+Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
+Clear-Host
+write-host("Grading Homework 1... This might take a while.")
+$startTime = Get-Date
+$ProgressPreference = 'SilentlyContinue'
+
+function InvokeScript {
     param(
         $SourceDevice,
         $Script,
         $Username,
         $Passwd
         )
-    for ($i = 29; $i -le 29; $i++) { ##This loop is for targeting the correct team numbers in vSphere. You can change the integer to adjust for how many teams.
+    for ($i = 1; $i -le 24; $i++) {
         if ($i -lt 10) {
-            $teamNumber = "0$i" ##This is done for formatting, because the team numbers in vSphere are formatted "Team_01"
+            $teamNumber = "0$i"
         } else {
             $teamNumber = $i
         }
-        $result = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice | Invoke-VMScript -ScriptText $Script -GuestPassword $Passwd -GuestUser $Username  
-    }
-    return $result
+        $VM = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice
+        if ($VM.PowerState -eq "PoweredOff") {
+            Start-VM -VM $VM
+            Write-Host "Powering on Team_$teamNumber $SourceDevice"
+        }
+        return Invoke-VMScript -ScriptText $Script -GuestPassword $Passwd -GuestUser $Username -VM $VM
+        }
+
 }
 
-#Test DNS Settings for Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "Get-DnsClientServerAddress" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match "8.8.8.8, 8.8.4.4"){
-
-        Write-Output "Correct DNS found for Team $i"
-    } else {
-
-        Write-Output "Incorrect DNS found for Team $i"
-
+function TestConnection {
+    param(
+        $SourceDevice,
+        $Script,
+        $Username,
+        $Passwd,
+        $TestName,
+        $TestExpectedResult,
+        $additionalPoints
+        )
+    $data = @()
+    for ($i = 1; $i -le 24; $i++) {
+        $ScriptResult = InvokeScript -SourceDevice $SourceDevice -Script $Script -Username $Username -Passwd $Passwd
+        points = 0
+        if ($ScriptResult -match $TestExpectedResult) {
+            points += $additionalPoints
+            Write-Output "$TestName successful for Team $i $SourceDevice"
+        } else {
+            Write-Output "$TestName unsuccessful for Team $i $SourceDevice"
+        }
+        $data += [pscustomobject]@{
+            Team = $i
+            Points = $points
+        }
     }
 }
+    #Test DNS Settings for Win10Client
+TestConnection -SourceDevice "Win10Client" -Script "Get-DnsClientServerAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "Correct DNS found" -TestExpectedResult "8.8.8.8, 8.8.4.4"
 
-#Test IP address for Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match "10.42.*.12"){
+TestConnection -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "Correct IP address found" -TestExpectedResult "10.42.*.12"
+    
+TestConnection -SourceDevice "Win10Client" -Script "(Test-Connection 10.42.$i.1 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "PING connection to gateway" -TestExpectedResult "0"
+    
+TestConnection -SourceDevice "Win10Client" -Script "(Test-Connection 192.168.254.254 -Count 1).StatusCode" -Us
 
-        Write-Output "Correct Win10Client IP found for Team $i"
-    } else {
 
-        Write-Output "Incorrect Win10Client IP found for Team $i"
-
-    }
-}
-
-#Test ping to Win10Client gateway
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "(Test-Connection 10.42.$i.1 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match '0'){
-
-        Write-Output "PING Connection to gateway successful for Team $i"
-    } else {
-
-        Write-Output "PING Connection tp gateway unsccessful for Team $i"
-
-    }
-}
-
-#Test ping to Win10Client enterprise gateway
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "(Test-Connection 192.168.254.254 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match '0'){
-
-        Write-Output "PING Connection to 192.168.254.254 successful for Team $i"
-    } else {
-
-        Write-Output "PING Connection to 192.168.254.254 unsuccessful for Team $i"
-
-    }
-}
-
-#Test ping dns.google from Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "(Test-Connection dns.google -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match '0'){
-
-        Write-Output "PING Connection to dns.google successful for Team $i"
-    } else {
-
-        Write-Output "PING Connection to dns.google unsuccessful for Team $i"
-
-    }
-}
-
-#Test ping 8.8.8.8 from Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $ScriptResult = InvokeScript -SourceDevice "Win10Client" -Script "(Test-Connection 8.8.8.8 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!"
-    if  ($ScriptResult -match '0'){
-
-        Write-Output "PING Connection to 8.8.8.8 successful for Team $i"
-    } else {
-
-        Write-Output "PING Connection to 8.8.8.8 unsuccessful for Team $i"
-
-    }
-}
-
+Write-Host("Grading Homework 1 Complete!")
+$endTime = Get-Date
+$elapsedTime = $endTime - $startTime
+Write-Host "This grading took: $($elapsedTime.TotalSeconds) seconds to run"
+$data | Export-Csv -Path 'Homework1_Grades.csv' -NoTypeInformation

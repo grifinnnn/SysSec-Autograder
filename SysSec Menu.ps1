@@ -41,7 +41,6 @@ while ($selectedIndex -ne ($menuOptions.Count - 1)) {
     }
 }
 
-
 switch ($menuOptions[$selectedIndex]) {
     "Homework 1" {
         .\SysSecHomework1.ps1
