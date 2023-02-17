@@ -59,8 +59,9 @@ $NixPing8 = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 8.8.8.8 &
 $NixPingDNS = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 dns.google &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "True" -AdditionalPoints 8
 $NixUpdated = CheckState -SourceDevice "UbuntuClient" -Script "apt-get -s upgrade | grep -c '^Inst'" -Username "sysadmin" -Passwd "Change.me!" -TestName "Checking if system is upgraded" -TestExpectedResult "0" -AdditionalPoints  8
 $results = $WinPingDNS + $WinPing8 + $NixPing8 + $NixPingDNS + $NixUpdated | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
-$results | Export-Csv -Path "Results.csv" -NoTypeInformation
+$results | Export-Csv -Path "Homework1_Grades.csv" -NoTypeInformation
 Write-Host("Grading Homework 1 Complete!")
 $endTime = Get-Date
 $elapsedTime = $endTime - $startTime
 Write-Host "This grading took: $($elapsedTime.TotalSeconds) seconds to run"
+
