@@ -1,13 +1,13 @@
 Clear-Host
-$vSphereUser = Read-Host "vSphere Username"
-$vSpherePass = Read-Host "vSphere Password" -AsSecureString
+$vSphereUser = "grefol@sphere.local"#Read-Host "vSphere Username"
+$vSpherePass = "DadMomJordanXP1!"#Read-Host "vSphere Password" -AsSecureString
 
 Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
 Clear-Host
 write-host("Grading Homework 2... This might take a while.")
 $startTime = Get-Date
 $ProgressPreference = 'SilentlyContinue'
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Continue'
 
 function CheckState {
     param(
@@ -66,10 +66,11 @@ $checkWinIP = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPAddress |
 $checkWinPing = CheckState -SourceDevice "Win10Client" -Script "(Test-Connection 8.8.8.8 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "0" -AdditionalPoints 2.5
 $checkWinDNSPing =CheckState -SourceDevice "Win10Client" -Script "(Test-Connection dns.google -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "0" -AdditionalPoints 2.5
 ##Checking Ubuntu connection and configuration
-$checkNixIP = CheckState -SourceDevice "UbuntuClient" -Script "ip addr | grep 'inet 10'" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP" -TestExpectedResult "10.42.{$number}.7" -AdditionalPoints 2.5
-$checkNixDNSPing = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 dns.google &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "True" -AdditionalPoints 2.5
-$checkNixPing = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 8.8.8.8 &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "True" -AdditionalPoints 2.5
 $checkNixGateway = CheckState -SourceDevice "UbuntuClient" -Script "ip route | grep 'default via'" -Username "sysadmin" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.43.{$number}.1" -AdditionalPoints 2.5
+$checkNixIP = CheckState -SourceDevice "UbuntuClient" -Script "ip addr | grep 'inet 10'" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP" -TestExpectedResult "10.42.{$number}.7" -AdditionalPoints 2.5
+$checkNixPing = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 8.8.8.8 &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkNixDNSPing = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 dns.google &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "True" -AdditionalPoints 2.5
+
 
 $results = $checkWinGateway + $checkWinIP + $checkWinPing + $checkWinDNSPing + $checkNixIP + $checkNixDNSPing + $checkNixPing + $checkNixGateway | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
 $results | Export-Csv -Path "Homework2_Grades.csv" -NoTypeInformation

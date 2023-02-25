@@ -1,126 +1,90 @@
+Clear-Host
+$vSphereUser = Read-Host "vSphere Username"
+$vSpherePass = Read-Host "vSphere Password" -AsSecureString
 
-function TestPing { ## This function is designed to ping the $TargetIP from the $TargetVM using the local credentials.
+Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
+Clear-Host
+write-host("Grading Homework 3... This might take a while.")
+$startTime = Get-Date
+$ProgressPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'SilentlyContinue'
+
+function CheckState {
     param(
-        $TargetIP,
-        $SourceDevice,
-        $Username,
-        $Passwd
-        )
-    for ($i = 30; $i -le 30; $i++) {
-        if ($i -lt 10) {
-            $teamNumber = "0$i"
-        } else {
-            $teamNumber = $i
+        $SourceDevice, ## device you are logging into
+        $Script, ## script you want to run
+        $Username, ## username for an account on $SourceDevice
+        $Passwd, ## password for an account on $SourceDevice
+        $TestName, ## name of what is being tested, for instance "Pinging 8.8.8.8 from Win10Client"
+        $TestExpectedResult, ## the expected result of the script to determine successful system state
+        $AdditionalPoints ## number of points you want test to be worth
+    )
+
+    $TeamPoints = @()
+    for ($number = 1; $number -le 24; $number++) { ## change the upper bound number based on how many teams are being graded. 
+        if ($number -lt 10) { ## done because format for numbers <10 are 01, 02, etc.
+            $teamNumber = "0$number"
         }
-        $result = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice | Invoke-VMScript -ScriptText "(Test-Connection $TargetIP -Count 1).StatusCode" -GuestPassword $Passwd -GuestUser $Username ##Add looping through the SysSec folder later
-    }
-    return $result
-}
-function TestWebProtocol { ##This function is designed to test different web protocols. You set the $TargetIP, $SourceDevice, $Port, $Username, and $Passswd. $TargetIP is the IP you're running the test aganist. $SourceDevice is the device that is running the scripts. $Port is the protocol you want to test. $Username and $Passwd are the credentials to the $SourceDevice.
-    param(
-        $TargetIP,
-        $SourceDevice,
-        $Port,
-        $Username,
-        $Passwd
-        )
-    for ($i = 29; $i -le 29; $i++) { ##This loop is for targeting the correct team numbers in vSphere. You can change the integer to adjust for how many teams.
-        if ($i -lt 10) {
-            $teamNumber = "0$i" ##This is done for formatting, because the team numbers in vSphere are formatted "Team_01"
-        } else {
-            $teamNumber = $i
+        else {
+            $teamNumber = $number
         }
-        $result = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice | Invoke-VMScript -ScriptText "(Test-NetConnection $TargetIP -Port $Port).TcpTestSucceeded" -GuestPassword $Passwd -GuestUser $Username ## This script portion of this command is what is executed on the $SourceDevice. It sends traffic to the $TargetIP on $Port, and reports if connection was successful. 
+        $VM = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice
+        if ($VM.PowerState -eq "PoweredOff") {## makes sure VMs are powered on before running scripts. NOTE: there is a bug where VMware tools will stop running if VM's go into hibernation. Fix in windwows power settings.
+            Start-VM -VM $VM 
+            Write-Host "Powering on Team_$teamNumber $SourceDevice"
+            Wait-Tools -VM $VM
+        }
+        $points = 0
+
+        $ScriptResult = Invoke-VMScript -ScriptText $Script -GuestPassword $Passwd -GuestUser $Username -VM $VM -ToolsWaitSecs 120 ## will return output from script that is run.
+        $ExpectedResult = $TestExpectedResult -f $number ## formats parameters so that you a substitute team numbers for ip addresses. Ex: 10.42{$number}.12
+        if ($ScriptResult -match $ExpectedResult) {
+            Write-Host("$TestName successful for Team $number $SourceDevice")
+            $points += $AdditionalPoints
+        }
+        else {
+            Write-Host("$TestName unsuccessful for Team $number $SourceDevice")
+        }
+        $TeamPoints += [PSCustomObject]@{
+            Team   = "Team $number"
+            Points = $points
+        }
     }
-    return $result
+    return $TeamPoints
 }
 
-#Test ping from Win10Client to 8.8.8.8
-for ($i = 29; $i -le 29; $i++) {
-    $pingResult = TestPing -TargetIP "8.8.8.8" -SourceDevice "Win10Client" -Username "sysadmin" -Passwd "Change.me!"
-    if ($pingResult -match '0'){
-        Write-Output "PING Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "PING Connection Unsuccessful for Team $i"
-    }
-}
+##Checking Win10 connection  and configuration
+$checkWinGateway = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPConfiguration | Select-Object -ExpandProperty IPv4DefaultGateway | Select-object NextHop" -Username "sysadmin" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.42.{$number}.1" -AdditionalPoints 2.5  
+$checkWinIP = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP address" -TestExpectedResult "10.42.{$number}.12" -AdditionalPoints 2.5
 
-#Test ping from OutsideDevice to UbuntuClient
-for ($i = 29; $i -le 29; $i++) {
-    $pingResult = TestPing -TargetIP "10.43.$i.12" -SourceDevice "OutsideDevice" -Username "sysadmin" -Passwd "Change.me!"
-    if ($pingResult -match '0'){
-        Write-Output "PING Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "PING Connection Unsuccessful for Team $i"
-    }
-}
-#Test HTTP for Win10Client
-for ($i = 29; $i -le 29; $i++) {
-   $httpResult = TestWebProtocol -TargetIP "www.go.com" -SourceDevice "Win10Client" -Port "80" -Username "sysadmin" -Passwd "Change.me!"
-   if ($httpResult -match 'True'){
-       Write-Output "HTTP Connection Successful for Team $i"
-   }
-   else{
-       Write-Output "HTTP Connection Unsuccessful for Team $i"
-   }
-}
+##Checking Ubuntu connection and configuration
+$checkNixIP = CheckState -SourceDevice "UbuntuClient" -Script "ip addr | grep 'inet 10'" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP" -TestExpectedResult "10.42.{$number}.7" -AdditionalPoints 2.5
+$checkNixGateway = CheckState -SourceDevice "UbuntuClient" -Script "ip route | grep 'default via'" -Username "sysadmin" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.43.{$number}.1" -AdditionalPoints 2.5
 
-#Test HTTPS for Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $httpsResult = TestWebProtocol -TargetIP "www.ftx.com" -SourceDevice "Win10Client" -Port "443" -Username "sysadmin" -Passwd "Change.me!"
-    Write-Host($httpsResult)
-    if ($httpsResult -match 'True'){
-        Write-Output "HTTPS Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "HTTPS Connection Unsuccessful for Team $i"
-    }
-}
+##Checking Firewall Rules
+$checkWinHTTP = CheckState -SourceDevice "Win10Client" -Script "(Test-NetConnection www.go.com -Port 80).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing HTTP" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkWinHTTPS = CheckState -SourceDevice "Win10Client" -Script "(Test-NetConnection www.ftx.com -Port 443).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing HTTPS" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkOutsideRDP = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.42.{$number}.12 -Port 3389).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing RDP" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkOutsideSSH = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.43.{$number}.7 -Port 22).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing SSH" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkOutsideWinRM= CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.43.{$number}.12 -Port 5985).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing WinRM" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkWinFTP = CheckState -SourceDevice "Win10Client" -Script "(Test-NetConnection bks4-speedtest-1.tele2.net -Port 21).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing FTP" -TestExpectedResult "True" -AdditionalPoints 2.5
+$checkWinPing = CheckState -SourceDevice "Win10Client" -Script "(Test-Connection 8.8.8.8 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "0" -AdditionalPoints 2.5
+$checkOutsidePing = CheckState -SourceDevice "OutsideDevice" -Script "(Test-Connection 10.43.{$number}.7 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging UbuntuClient" -TestExpectedResult "0" -AdditionalPoints 2.5
+
+##Checking Firewall Management
+$checkOutsideFirewallSSH = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.42.{$number}.1 -Port 22).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing Firewall via SSH" -TestExpectedResult "False" -AdditionalPoints 2.5
+$checkOutsideFirewallHTTP = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.42.{$number}.1 -Port 80).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing Firewall via HTTP" -TestExpectedResult "False" -AdditionalPoints 2.5
+$checkOutsideFirewallHTTPS = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.42.{$number}.1 -Port 443).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing Firewall via HTTPS" -TestExpectedResult "False" -AdditionalPoints 2.5
+
+##Go back and adjust HW03
 
 
-#Test FTP for Win10Client
-for ($i = 29; $i -le 29; $i++) {
-    $ftpResult = TestWebProtocol -TargetIP "bks4-speedtest-1.tele2.net" -SourceDevice "Win10Client" -Port "21" -Username "sysadmin" -Passwd "Change.me!"
-    if ($ftpResult -match 'True'){
-        Write-Output "FTP Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "FTP Connection Unsuccessful for Team $i"
-    }
-}
 
-#Test RDP into Win10Client from OutsideDevice
-for ($i = 29; $i -le 29; $i++) {
-    $rdpResult = TestWebProtocol -TargetIP "10.42.$i.12" -SourceDevice "OutsideDevice" -Port "3389" -Username "sysadmin" -Passwd "Change.me!"
-    if ($rdpResult -match 'True'){
-        Write-Output "RDP Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "RDP Connection Unsuccessful for Team $i"
-    }
-}
+$results = $checkWinGateway + $checkWinIP + $checkWinPing + $checkWinDNSPing + $checkNixIP + $checkNixDNSPing + $checkNixPing + $checkNixGateway | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
+$results | Export-Csv -Path "Homework3_Grades.csv" -NoTypeInformation
 
-#Test SSH into UbuntuClient from OutsideDevice
-for ($i = 29; $i -le 29; $i++) {
-    $sshResult = TestWebProtocol -TargetIP "10.43.$i.7" -SourceDevice "OutsideDevice" -Port "22" -Username "sysadmin" -Passwd "Change.me!"
-    if ($sshResult -match 'True'){
-        Write-Output "SSH Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "SSH Connection Unsuccessful for Team $i"
-    }
-}
-
-#Test WinRM into Win10Client from OutsideDevice
-for ($i = 29; $i -le 29; $i++) {
-    $winrmResult = TestWebProtocol -TargetIP "10.42.$i.12" -SourceDevice "OutsideDevice" -Port "5985" -Username "sysadmin" -Passwd "Change.me!"
-    if ($winrmResult -match 'True'){
-        Write-Output "WinRM Connection Successful for Team $i"
-    }
-    else{
-        Write-Output "WinRM Connection Unsuccessful for Team $i"
-    }
-}
+Write-Host("Grading Homework 3 Complete!")
+$endTime = Get-Date
+$elapsedTime = $endTime - $startTime
+Write-Host "This grading took: $($elapsedTime.TotalSeconds) seconds to run"
 
