@@ -1,77 +1,13 @@
-    function RunInvokeScript {
-        param(
-            $SourceDevice,
-            $Script,
-            $Username,
-            $Passwd
-            )
-        for ($i = 30; $i -le 30; $i++) {
-            if ($i -lt 10) {
-                $teamNumber = "0$i"
-            } else {
-                $teamNumber = $i
-            }
-            $result = Get-Folder "SysSec" | Get-Folder "Team_$teamNumber" | Get-VM $SourceDevice | Invoke-VMScript -ScriptText $Script -GuestPassword $Passwd -GuestUser $Username 
-        }
-        return $result
-    }
+##Clear-Host
+##$vSphereUser = Read-Host "vSphere Username"
+##$vSpherePass = Read-Host "vSphere Password" -AsSecureString
 
-    for ($i = 1; $i -le 30; $i++) {
-        Team($i)Points = 0
-        ##Check IP for ADServer
-        $AD_IPAddress = RunInvokeScript -SourceDevice "ADServer" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!"
-        if ($AD_IPAddress -match '10.42.$i.98'){
-            Team($i)Points += 2.5
-        }
-        ##Check DNS for ADServer
-        $AD_DNS = RunInvokeScript -SourceDevice "ADServer" -Script "Get-DnsClientServerAddress" -Username "sysadmin" -Passwd "Change.me!"
-        if ($AD_DNS -match '127.0.0.1'){
-            Team($i)Points += 2.5
-        }
-        ##Check DNS for Win10Client
-        $Win10_DNS = RunInvokeScript -SourceDevice "Win10Client" -Script "Get-DnsClientServerAddress" -Username "sysadmin" -Passwd "Change.me!"
-        if ($Win10_DNS -match '10.42.$i.98'){
-            Team($i)Points += 2.5
-        }
-        ##Check IP for ServerIIS
-        $IIS_IP = RunInvokeScript -SourceDevice "ServerIIS" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!"
-        if ($IIS_IP -match '10.42.$i.90'){
-            Team($i)Points += 2.5
-        }
-        ##Check domain for Win10Client
-        $Win10_Domain = RunInvokeScript -SourceDevice "ServerIIS" -Script "(Get-WmiObject -Class Win32_ComputerSystem).Domain" -Username "sysadmin" -Passwd "Change.me!"
-        if ($Win10_Domain -match 'team$i.local'){
-            Team($i)Points += 2.5
-        }
-        ##Check Powershell logging
-        $PS_Logging = RunInvokeScript -SourceDevice "ServerAD" -Script "(Get-ExecutionPolicy) -eq 'Transcription'" -Username "sysadmin" -Passwd "Change.me!"
-        if ($PS_Logging -match 'Enabled'){
-            Team($i)Points += 2.5
-        }
-        ##Check DNS status is alive and automatic
-        $DNS_Status = RunInvokeScript -SourceDevice "ServerAD" -Script "(Get-Service -Name 'DNS').Status -eq 'Started' -and (Get-Service -Name 'DNS').StartType -eq 'Automatic'" -Username "sysadmin" -Passwd "Change.me!"
-        if ($DNS_Status -eq 'True'){
-            Team($i)Points += 2.5
-        }
-        ##Check if IIS status is alive and automatic
-        $IIS_Status = RunInvokeScript -SourceDevice "ServerIIS" -Script "(Get-Service -Name 'W3SVC').Status -eq 'Started' -and (Get-Service -Name 'W3SVC').StartType -eq 'Automatic'" -Username "sysadmin" -Passwd "Change.me!"
-        if ($IIS_Status -eq 'True'){
-            Team($i)Points += 2.5
-        }
-    }
-
-
-
-    Clear-Host
-$vSphereUser = Read-Host "vSphere Username"
-$vSpherePass = Read-Host "vSphere Password" -AsSecureString
-
-Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
+##Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
 Clear-Host
-write-host("Grading Homework 3... This might take a while.")
+write-host("Grading Homework 4... This might take a while.")
 $startTime = Get-Date
 $ProgressPreference = 'SilentlyContinue'
-$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Continue'
 
 function CheckState {
     param(
@@ -85,7 +21,7 @@ function CheckState {
     )
 
     $TeamPoints = @()
-    for ($number = 1; $number -le 24; $number++) { ## change the upper bound number based on how many teams are being graded. 
+    for ($number = 1; $number -le 3; $number++) { ## change the upper bound number based on how many teams are being graded. 
         if ($number -lt 10) { ## done because format for numbers <10 are 01, 02, etc.
             $teamNumber = "0$number"
         }
@@ -118,8 +54,8 @@ function CheckState {
 }
 
 ##Checking Win10 connection  and configuration
-$checkWinGateway = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPConfiguration | Select-Object -ExpandProperty IPv4DefaultGateway | Select-object NextHop" -Username "sysadmin" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.42.{$number}.1" -AdditionalPoints 2.5  
-$checkWinIP = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP address" -TestExpectedResult "10.42.{$number}.12" -AdditionalPoints 2.5
+##$checkWinGateway = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPConfiguration | Select-Object -ExpandProperty IPv4DefaultGateway | Select-object NextHop" -Username "sysadmin" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.42.{$number}.1" -AdditionalPoints 2.5  
+<# $checkWinIP = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "IP address" -TestExpectedResult "10.42.{$number}.12" -AdditionalPoints 2.5
 $checkWinPing = CheckState -SourceDevice "Win10Client" -Script "(Test-Connection 8.8.8.8 -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "0" -AdditionalPoints 2.5
 $checkWinDNSPing =CheckState -SourceDevice "Win10Client" -Script "(Test-Connection dns.google -Count 1).StatusCode" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "0" -AdditionalPoints 2.5
 
@@ -136,15 +72,56 @@ $checkOutsideRDP = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetCo
 $checkOutsideSSH = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.43.{$number}.7 -Port 22).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing SSH" -TestExpectedResult "True" -AdditionalPoints 2.5
 $checkOutsideWinRM= CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.43.{$number}.12 -Port 5985).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing WinRM" -TestExpectedResult "True" -AdditionalPoints 2.5
 $checkWinFTP = CheckState -SourceDevice "Win10Client" -Script "(Test-NetConnection bks4-speedtest-1.tele2.net -Port 21).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "Testing FTP" -TestExpectedResult "True" -AdditionalPoints 2.5
+ #>
+##HW4
+
+##Checking ADServer configuration
+$checkADServerIPaddress = CheckState -SourceDevice "ADServer" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "Administrator" -Passwd "Change.me!" -TestName "IP Address" -TestExpectedResult "10.42.{$number}.98" -AdditionalPoints 2.5
+$checkADServerGateway = CheckState -SourceDevice "ADServer" -Script "Get-NetIPConfiguration | Select-Object -ExpandProperty IPv4DefaultGateway | Select-object NextHop" -Username "Administrator" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.42.{$number}.1" -AdditionalPoints 2.5
+$checkADServerDNS = CheckState -SourceDevice "ADServer" -Script "Get-DNSClientServerAddress -AddressFamily IPv4 | Select-Object ServerAddresses" -Username "Administrator" -Passwd "Change.me!" -TestName "DNS" -TestExpectedResult "127.0.0.1" -AdditionalPoints 2.5
+
+##Checking IISServer configuration 
+<# $checkIISServerIPaddress = CheckState -SourceDevice "ADServer" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "Administrator" -Passwd "Change.me!" -TestName "IP Address" -TestExpectedResult "10.42.{$number}.90" -AdditionalPoints 2.5
+$checkIISServerGateway = CheckState -SourceDevice "IISServer" -Script "Get-NetIPConfiguration | Select-Object -ExpandProperty IPv4DefaultGateway | Select-object NextHop" -Username "Administrator" -Passwd "Change.me!" -TestName "Gateway" -TestExpectedResult "10.42.{$number}.1" -AdditionalPoints 2.5
+$checkIISServerDNS = CheckState -SourceDevice"ADServer" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "Administrator" -Passwd "Change.me!" -TestName "DNS" -TestExpectedResult "10.42.{$number}.98" -AdditionalPoints 2.5
+
+##Checking Win10Client DNS
+$CheckWin10ClientDNS = CheckState -SourceDevice "Win10Client" -Script "Get-NetIPAddress | Where AddressFamily -eq 'IPv4' | Select-Object -ExpandProperty IPAddress" -Username "sysadmin" -Passwd "Change.me!" -TestName "Check DNS of Win10Client" -TestExpectedResult "10.42.{$number}.98" -AdditionalPoints "2.5"
+
+##Checking Domain on ADServer, IISServer, and Win10Client
+$checkADServerDomain= CheckState -SourceDevice "ADServer" -Script "Get-WmiObject -Namespace root\cimv2 -Class Win32_ComputerSystem | Select Domain" -Username "Administrator" -Passwd "Change.me!" -TestName "Checking ADServer Domain" -TestExpectedResult "team{$number}.local" -AdditionalPoints 2.5
+$checkIISServerDomain= CheckState -SourceDevice "IISServer" -Script "Get-WmiObject -Namespace root\cimv2 -Class Win32_ComputerSystem | Select Domain" -Username "Administrator" -Passwd "Change.me!" -TestName "Checking IISServer Domain" -TestExpectedResult "team{$number}.local" -AdditionalPoints 2.5
+$checkWin10Domain= CheckState -SourceDevice "Win10Client" -Script "Get-WmiObject -Namespace root\cimv2 -Class Win32_ComputerSystem | Select Domain" -Username "sysadmin" -Passwd "Change.me!" -TestName "Checking Win10 Domain" -TestExpectedResult "team{$number}.local" -AdditionalPoints "2.5"
 
 ##Checking Active Directory Users
-$checkADUsers = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Identity 'griffy'"  -Username "sysadmin" -Passwd "Change.me!" -TestName "Finding Griffy on AD" -TestExpectedResult "True" -AdditionalPoints 5
+$checkADUsers = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Identity 'griffy'"  -Username "Administrator" -Passwd "Change.me!" -TestName "Finding Griffy on AD" -TestExpectedResult "True" -AdditionalPoints 5
+$checkADUsers = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Identity 'QuynhCEO'" -Username "Administrator" -Passwd "Change.me!" -TestName "Finding QuynhCEO on AD" -TestExpectedResult "True" -AdditionalPoints 5
 
-$results = $checkWinGateway + $checkWinIP + $checkWinPing + $checkWinDNSPing + $checkNixIP + $checkNixDNSPing + $checkNixPing + $checkNixGateway | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
-$results | Export-Csv -Path "Homework3_Grades.csv" -NoTypeInformation
+##Check if Griffy is in Administrator Group
+$checkGriffyAdmin = CheckState -SourceDevice "ADServer" -Script "Get-ADGroupMember -Identity 'Adminstrators' | Select-Object 'Name'" -Username "Administrator" -Passwd "Change.me!" -TestName "Check Griffy is Admin" -TestExpectedResult "Griffy" -AdditionalPoints "2.5"
 
-Write-Host("Grading Homework 3 Complete!")
+##Check if QuynhCEO is not in Administrator Group
+$checkQuynhCEOAdmin = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Properties 'MemberOf' | Select-Object 'MemberOf'" -Username "Administrator" -Passwd "Change.me!" -TestName "Check QuynhCEO is not Admin" -TestExpectedResult "{}" -AdditionalPoints "2.5"
+
+##Check if OU Gamers exists
+$checkOUGamers = CheckState -SourceDevice "ADServer" -Script "GetADOrganizationalUnit -Filter {Name -eq 'Gamers'} | Select 'Name'" -Username "Administrator" -Passwd "Change.me!" -TestName "Check OU Gamers exists" -TestExpectedResult "Gamers" -AdditionalPoints "2.5"
+
+##Check if Users are in OU Gamers
+$CheckUsersInOU = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Filter "Name -eq 'Griffy'" | Select "DistinguishedName"" -Username "Administrator" -Passwd "Change.me!" -TestName 'Check Griffy in OU Gamers' -TestExpectedResult "OU=Gamers" -AdditionalPoints "2.5"
+$CheckUsersInOU = CheckState -SourceDevice "ADServer" -Script "Get-ADUser -Filter "Name -eq 'QuynhCEO'" | Select "DistinguishedName"" -Username "Administrator" -Passwd "Change.me!" -TestName 'Check QuynhCEO in OU Gamers' -TestExpectedResult "OU=Gamers" -AdditionalPoints "2.5"
+
+##Checking if OutsideDevice can access Web Server
+$checkOutsidetoWebServer = CheckState -SourceDevice "OutsideDevice" -Script "(Test-NetConnection 10.42.{$number}.90).TcpTestSucceeded" -Username "sysadmin" -Passwd "Change.me!" -TestName "OutsideDevice to Web Server Port 80" -TestExpectedResult "True" -AdditionalPoints "2.5"
+ #>
+##Do not allow any other traffic inbound to or outbound from the IIS server or AdminNet other than traffic specified as allowed in HW031
+##This will be a check to make sure students have a deny all rule in the LAN net rules
+
+write-host($checkADServerIPaddress)
+$results = @()
+$results = $checkADServerIPaddress + $checkADServerGateway + $checkADServerDNS | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
+$results | Export-Csv -Path "Homework4_Grades.csv" -NoTypeInformation
+
+Write-Host("Grading Homework 4 Complete!")
 $endTime = Get-Date
 $elapsedTime = $endTime - $startTime
 Write-Host "This grading took: $($elapsedTime.TotalSeconds) seconds to run"
-

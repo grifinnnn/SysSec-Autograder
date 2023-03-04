@@ -81,6 +81,7 @@ $checkOutsideFirewallHTTPS = CheckState -SourceDevice "OutsideDevice" -Script "(
 
 
 $results = $checkWinGateway + $checkWinIP + $checkWinPing + $checkWinDNSPing + $checkNixIP + $checkNixDNSPing + $checkNixPing + $checkNixGateway | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
+
 $results | Export-Csv -Path "Homework3_Grades.csv" -NoTypeInformation
 
 Write-Host("Grading Homework 3 Complete!")

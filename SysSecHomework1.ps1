@@ -1,8 +1,8 @@
-Clear-Host
-$vSphereUser = Read-Host "vSphere Username"
-$vSpherePass = Read-Host "vSphere Password" -AsSecureString
+#Clear-Host
+#$vSphereUser = Read-Host "vSphere Username"
+#$vSpherePass = Read-Host "vSphere Password" -AsSecureString
 
-Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
+#Connect-VIServer cdr-vcenter.cse.buffalo.edu -User $vSphereUser -Password $vSpherePass
 Clear-Host
 write-host("Grading Homework 1... This might take a while.")
 $startTime = Get-Date
@@ -20,7 +20,7 @@ function CheckState {
     )
 
     $TeamPoints = @()
-    for ($number = 1; $number -le 24; $number++) { ## change the upper bound number based on how many teams are being graded. 
+    for ($number = 1; $number -le 1; $number++) { ## change the upper bound number based on how many teams are being graded. 
         if ($number -lt 10) { ## done because format for numbers <10 are 01, 02, etc.
             $teamNumber = "0$number"
         }
@@ -58,6 +58,8 @@ $WinPing8 = CheckState -SourceDevice "Win10Client" -Script "(Test-Connection 8.8
 $NixPing8 = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 8.8.8.8 &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging 8.8.8.8" -TestExpectedResult "True" -AdditionalPoints 8
 $NixPingDNS = CheckState -SourceDevice "UbuntuClient" -Script "ping -c 1 dns.google &> /dev/null; echo $?" -Username "sysadmin" -Passwd "Change.me!" -TestName "Pinging dns.google" -TestExpectedResult "True" -AdditionalPoints 8
 $NixUpdated = CheckState -SourceDevice "UbuntuClient" -Script "apt-get -s upgrade | grep -c '^Inst'" -Username "sysadmin" -Passwd "Change.me!" -TestName "Checking if system is upgraded" -TestExpectedResult "0" -AdditionalPoints  8
+
+
 $results = $WinPingDNS + $WinPing8 + $NixPing8 + $NixPingDNS + $NixUpdated | Group-Object -Property Team | Select-Object -Property Name, @{n = 'Points'; e = { ($_.Group | Measure-Object -Property Points -Sum).Sum } }
 $results | Export-Csv -Path "Homework1_Grades.csv" -NoTypeInformation
 Write-Host("Grading Homework 1 Complete!")
